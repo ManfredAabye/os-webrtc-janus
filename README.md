@@ -1,116 +1,117 @@
 # os-webrtc-janus
 
-Addon-module for [OpenSimulator] to provide webrtc voice support
-using Janus-gateway.
+Addon-Modul für [OpenSimulator], um WebRTC-Sprachunterstützung
+mit dem Janus-Gateway bereitzustellen.
 
-For an explanation of background and architecture, 
-this project was presented at the
+Eine Erklärung zu Hintergrund und Architektur
+wurde auf der
 [OpenSimulator Community Conference] 2024
-in the presentation
-[WebRTC Voice for OpenSimulator](https://www.youtube.com/watch?v=nL78fieIFYg).
+im Vortrag
+[WebRTC Voice for OpenSimulator](https://www.youtube.com/watch?v=nL78fieIFYg) präsentiert.
 
-This addon works by taking viewer requests for voice service and
-using a separate, external [Janus-Gateway WebRTC server].
-This can be configured to allow local region spatial voice
-and grid-wide group and spatial voice. See the sections below.
+Dieses Addon funktioniert, indem es Viewer-Anfragen für Sprachdienste
+entgegennimmt und einen separaten, externen [Janus-Gateway WebRTC-Server] nutzt.
+Dieser kann so konfiguriert werden, dass er lokale Regionen-Spatial-Voice
+sowie grid-weite Gruppen- und Spatial-Voice unterstützt. Siehe die Abschnitte unten.
 
-For running that separate Janus server, check out
-[os-webrtc-janus-docker] which has instructions for running
-Janus-Gateway on Linux and Windows WSL using Docker.
+Für den Betrieb dieses separaten Janus-Servers siehe
+[os-webrtc-janus-docker], das Anweisungen für den Betrieb
+des Janus-Gateways unter Linux und Windows WSL mit Docker enthält.
 
-Instructions for:
+Anleitungen für:
 
-- [Building into OpenSimulator](#Building): Build OpenSimulator with WebRTC voice service
-- [Configuring Simulator for Voice Services](#Configure_Simulator)
-- [Configuring Robust Grid Service](#Configure_Robust)
-- [Configure Standalone Region](#Configure_Standalone)
-- [Managing Voice Service](#Managing_Voice) (console commands, etc)
+- [Einbindung in OpenSimulator](#Building): Baue OpenSimulator mit WebRTC-Sprachdienst
+- [Simulator für Sprachdienste konfigurieren](#Configure_Simulator)
+- [Robust Grid Service konfigurieren](#Configure_Robust)
+- [Standalone-Region konfigurieren](#Configure_Standalone)
+- [Sprachdienst verwalten](#Managing_Voice) (Konsolenbefehle, etc.)
 
-**Note**: as of January 2024, this solution does not provide true spatial
-voice service using Janus. There are people working on additions to Janus
-to provide this but the existing solution provides only non-spatial
-voice services using the `AudioBridge` Janus plugin. Additionally,
-features like muting and individual avatar volume are not yet implemented.
+**Hinweis:** Stand Januar 2024 bietet diese Lösung keinen echten
+räumlichen Sprachdienst (Spatial Voice) mit Janus. Es gibt Personen,
+die an Erweiterungen für Janus arbeiten, um dies zu ermöglichen,
+aber die bestehende Lösung bietet nur nicht-räumliche
+Sprachdienste über das `AudioBridge`-Janus-Plugin. Außerdem sind
+Funktionen wie Stummschalten und individuelle Avatar-Lautstärke noch nicht implementiert.
 
 <a id="Known_Issues"></a>
-## Known Issues
+## Bekannte Probleme
 
-- No spatial audio
-- One can see your own "white dot" but you don't see other avatar's white dots
-- No muting
-- No individual volume control
+- Kein Spatial Audio
+- Man sieht seinen eigenen „weißen Punkt“, aber nicht die anderer Avatare
+- Kein Stummschalten
+- Keine individuelle Lautstärkeregelung
 
-And probably more found at [os-webrtc-janus issues](https://github.com/Misterblue/os-webrtc-janus/issues).
+Und wahrscheinlich mehr, siehe [os-webrtc-janus issues](https://github.com/Misterblue/os-webrtc-janus/issues).
 
 <a id="Building"></a>
-## Building Plugin into OpenSimulator
+## Plugin in OpenSimulator einbinden
 
-`os-webrtc-janus` is integrated as a source build into [OpenSimulator].
-It uses the [OpenSimulator] addon-module feature which makes the
-build as easy as cloning the `os-webrtc-janus` sources into the
-[OpenSimulator] source tree, running the build configuration script,
-and then building OpenSimulator.
+`os-webrtc-janus` wird als Quelltext-Build in [OpenSimulator] integriert.
+Es nutzt die Addon-Modul-Funktion von [OpenSimulator], sodass der
+Build so einfach ist wie das Klonen der `os-webrtc-janus`-Quellen in den
+[OpenSimulator]-Quelltextbaum, das Ausführen des Build-Konfigurationsskripts
+und dann das Bauen von OpenSimulator.
 
-The steps are:
+Die Schritte sind:
 
 ```
-# Get the OpenSimulator sources
+# OpenSimulator-Quellen holen
 git clone git://opensimulator.org/git/opensim
-cd opensim     # cd into the top level OpenSim directory
+cd opensim     # in das Top-Level-OpenSim-Verzeichnis wechseln
 
-# Fetch the WebRtc addon
+# WebRtc-Addon holen
 cd addon-modules
 git clone https://github.com/Misterblue/os-webrtc-janus.git
 cd ..
 
-# Build the project files
+# Projektdateien erzeugen
 ./runprebuild.sh
 
-# Compile OpenSimulator with the webrtc addon
+# OpenSimulator mit dem WebRTC-Addon bauen
 ./compile.sh
 
-# Copy the INI file for webrtc into a config dir that is read at boot
+# Die INI-Datei für WebRTC in ein Konfigurationsverzeichnis kopieren, das beim Start gelesen wird
 mkdir bin/config
 cp addon-modules/os-webrtc-janus/os-webrtc-janus.ini bin/config
 ```
 
-These building steps create several `.dll` files for `os-webrtc-janus`
-in `bin/WebRtc*.dll`. Some adventurous people have found that, rather
-than building the [OpenSimulator] sources, you can just copy the `.dll`s
-into an existing `/bin` directory. Just make sure the `WebRtc*.dll` files
-were built on the same version of [OpenSimulator] you are running.
+Diese Schritte erzeugen mehrere `.dll`-Dateien für `os-webrtc-janus`
+im Verzeichnis `bin/WebRtc*.dll`. Einige Nutzer haben herausgefunden, dass man – statt die
+[OpenSimulator]-Quellen zu bauen – die `.dll`-Dateien auch einfach in ein bestehendes
+`/bin`-Verzeichnis kopieren kann. Stelle nur sicher, dass die `WebRtc*.dll`-Dateien
+mit der gleichen Version von [OpenSimulator] gebaut wurden, die du verwendest.
 
 <a id="Configure_Simulator"></a>
-## Configure a Region for Voice
+## Eine Region für Voice konfigurieren
 
-The last step in [Building](#Building) copied `os-webrtc-janus.ini` into 
-the `bin/config` directory. [OpenSimulator] reads all the `.ini` files
-in that directory so this copy operation adds the configuration for `os-webrtc-janus`
-and this is what needs to be configured for the simulator and region.
+Im letzten Schritt von [Building](#Building) wurde `os-webrtc-janus.ini` in das 
+Verzeichnis `bin/config` kopiert. [OpenSimulator] liest alle `.ini`-Dateien
+in diesem Verzeichnis, sodass diese Kopieroperation die Konfiguration für `os-webrtc-janus`
+hinzufügt. Diese Konfiguration muss für Simulator und Region angepasst werden.
 
-The sample `.ini` file has two sections: `[WebRtcVoice]` and `[JanusWebRtcVoice]`.
-The `WebRtcVoice` section configures the what services the simulator uses
-for WebRtc voice. The `[JanusWebRtcVoice]` section configures any connection
-the simulator makes to the Janus server. The latter section is only updated
-if this simulator is using a local Janus server for spatial voice.
+Die Beispiel-`.ini`-Datei hat zwei Abschnitte: `[WebRtcVoice]` und `[JanusWebRtcVoice]`.
+Der Abschnitt `WebRtcVoice` konfiguriert, welche Dienste der Simulator für
+WebRTC-Voice nutzt. Der Abschnitt `[JanusWebRtcVoice]` konfiguriert alle Verbindungen
+vom Simulator zum Janus-Server. Dieser Abschnitt wird nur aktualisiert,
+wenn der Simulator einen lokalen Janus-Server für Spatial Voice nutzt.
 
-The values for `SpatialVoiceService` and `NonSpatialVoiceService` point
-either directly to a Janus service or to a Robust grid server that is providing
-the grid voice service. Both these options are in the sample `os-webrtc-janus.ini`
-file and the proper one should be uncommented.
+Die Werte für `SpatialVoiceService` und `NonSpatialVoiceService` zeigen
+entweder direkt auf einen Janus-Dienst oder auf einen Robust-Grid-Server, der
+den Grid-Sprachdienst bereitstellt. Beide Optionen sind in der Beispiel-`os-webrtc-janus.ini`
+vorgesehen – die passende sollte aktiviert werden.
 
-The viewer makes requests for either spatial voice (used in the region and parcels)
-or non-spatial voice (used for group chats or person-to-person voice conversations).
-`os-webrtc-janus` allows these two types of voice connections to be handled by
-different voice services. Thus there are two different configurations:
+Der Viewer fordert entweder Spatial Voice (für Regionen und Parzellen)
+oder Non-Spatial Voice (für Gruppen- oder Einzelgespräche) an.
+`os-webrtc-janus` ermöglicht, dass diese beiden Arten von Voice-Verbindungen
+durch verschiedene Voice-Dienste abgewickelt werden. Es gibt daher zwei unterschiedliche Konfigurationen:
 
-- all voice service is provided by the grid (both spatial and non-spatial point to a robust service), and
-- the region simulator provides a local Janus server for region spatial voice while the grid service is used for group chats
+- Alle Sprachdienste werden durch das Grid bereitgestellt (beide Einträge zeigen auf einen Robust-Dienst).
+- Der Region-Simulator stellt einen lokalen Janus-Server für Spatial Voice bereit, während Grid-Dienste für Gruppenchats genutzt werden.
 
-#### Grid Only Voice Services
+#### Nur Grid-Voice-Dienste
 
-The most common configuration will be for a simulator that uses the grid supplied
-voice services. For this configuration, `os-webrtc-janus.ini` would look like:
+Die häufigste Konfiguration ist ein Simulator, der die vom Grid bereitgestellten
+Sprachdienste nutzt. Dafür sieht die `os-webrtc-janus.ini` so aus:
 
 ```
 [WebRtcVoice]
@@ -120,20 +121,19 @@ voice services. For this configuration, `os-webrtc-janus.ini` would look like:
     WebRtcVoiceServerURI = ${Const|PrivURL}:${Const|PrivatePort}
 ```
 
-This directs both spatial and non-spatial voice to the grid service connector
-and `WebRtcVoiceServerURI` points to the configured Robust grid service.
+Dies leitet sowohl Spatial- als auch Non-Spatial-Voice an den Grid-Service-Connector weiter
+und `WebRtcVoiceServerURI` verweist auf den konfigurierten Robust-Grid-Service.
 
-There is no need for a `[JanusWebRtcVoice]` section because all that is handled by the grid services.
+Ein `[JanusWebRtcVoice]`-Abschnitt ist nicht nötig, da alles durch die Grid-Services abgedeckt wird.
 
-#### Local Simulator Janus Service
+#### Lokaler Simulator-Janus-Dienst
 
-In a grid setup, there might be a need for a single simulator/region to use its own
-Janus server for either privacy or to off-load the grid voice service.
-In this configuration, spatial voice is directed to the local Janus service
-while the non-spatial voice goes to the grid services to allow grid wide group
-chat and region independent person-to-person chat.
+In einer Grid-Umgebung kann es nötig sein, dass ein einzelner Simulator/eine Region
+einen eigenen Janus-Server nutzt, z.B. aus Datenschutzgründen oder zur Entlastung der Grid-Sprachdienste.
+In dieser Konfiguration wird Spatial Voice zum lokalen Janus-Dienst geleitet,
+während Non-Spatial Voice weiterhin die Grid-Dienste nutzt – so bleiben Gruppenchats grid-weit möglich.
 
-This is done with a `os-webrtc-janus.ini` that looks like:
+Die `os-webrtc-janus.ini` sieht dann so aus:
 ```
 [WebRtcVoice]
     Enabled = true
@@ -147,18 +147,17 @@ This is done with a `os-webrtc-janus.ini` that looks like:
     AdminAPIToken = AdminAPITokenToNeverCheckIn
 ```
 
-Notice that, since the simulator has its own Janus service, it must configure the
-connection parameters to access that Janus service. The details of running and
-configuring a Janus service is provided at [os-webrtc-janus-docker] but, the configuration
-here needs to specify the URI to address the Janus server and the API keys
-to allow this simulator access to its interfaces. The example above
-contains just sample entries.
+Beachte: Da der Simulator einen eigenen Janus-Dienst nutzt, müssen die
+Verbindungsparameter zu diesem Dienst konfiguriert werden. Details zum Betrieb
+und zur Konfiguration eines Janus-Dienstes stehen bei [os-webrtc-janus-docker]. 
+Hier müssen die URI zum Janus-Server und die API-Keys angegeben werden.
+Das Beispiel enthält Platzhalter.
 
 <a id="Configure_Robust"></a>
-## Configure Robust Server for WebRTC Voice
+## Robust-Server für WebRTC-Voice konfigurieren
 
-For the grid services side, `os-webrtc-janus` is configured as an additional service
-in the Robust OpenSimulator server. The additions to `Robust.ini` are:
+Auf Grid-Service-Seite wird `os-webrtc-janus` als zusätzlicher Dienst im Robust-OpenSimulator-Server konfiguriert.
+Die Ergänzungen in `Robust.ini` sind:
 
 ```
 ...
@@ -179,20 +178,20 @@ in the Robust OpenSimulator server. The additions to `Robust.ini` are:
 ...
 ```
 
-This adds `VoiceServiceConnector` to the list of services presented by this Robust server
-and adds the WebRtcVoice configuration that says to do both spatial and non-spatial voice
-using the Janus server, and the configuration for the Janus server itself.
+Damit wird `VoiceServiceConnector` zu den angebotenen Diensten des Robust-Servers
+hinzugefügt, und die WebRtcVoice-Konfiguration legt fest, dass sowohl Spatial- als auch Non-Spatial-Voice
+über den Janus-Server laufen, inkl. entsprechender Janus-Konfiguration.
 
-One can configure multiple Robust services to distribute the load of services
-and a Robust server with only `VoiceServiceConnector` in its ServiceList is possible.
+Es ist möglich, mehrere Robust-Services zur Lastverteilung zu konfigurieren.
+Ein Robust-Server kann auch ausschließlich `VoiceServiceConnector` in seiner ServiceList haben.
 
 <a id="Configure_Standalone"></a>
-## Configure Standalone Region
+## Standalone-Region konfigurieren
 
-[OpenSimulator] can be run "standalone" where all the grid services and regions are
-run in one simulator instance. Adding voice to this configuration is sometimes useful
-for very private meetings or testing. For this configuration, a Janus server is set up
-and the standalone simulator is configured to point all voice to that Janus server:
+[OpenSimulator] kann auch im „Standalone“-Modus betrieben werden, wobei alle Grid-Services und Regionen
+in einer Simulator-Instanz laufen. Sprachdienste können hier nützlich sein
+für private Meetings oder Tests. Dazu wird ein Janus-Server eingerichtet
+und der Standalone-Simulator so konfiguriert, dass alle Voice-Dienste auf diesen Server zeigen:
 
 ```
 [WebRtcVoice]
@@ -207,28 +206,28 @@ and the standalone simulator is configured to point all voice to that Janus serv
     AdminAPIToken = AdminAPITokenToNeverCheckIn
 ```
 
-This directs both spatial and non-spatial voice to the Janus server
-and configures the URI address of  the Janus server and the API access
-keys for that server.
+Das leitet sowohl Spatial- als auch Non-Spatial-Voice an den Janus-Server weiter
+und konfiguriert die URI und API-Zugänge für diesen Server.
 
 <a id="Managing_Voice"></a>
-## Managing Voice (Console commands)
+## Sprachdienste verwalten (Konsolenbefehle)
 
-There are a few console commands for checking on and controlling the voice system.
-The current list of commands for the simulator can be listed with the
-console command `help webrtc`.
+Es gibt einige Konsolenbefehle, um das Sprachsystem zu prüfen und zu steuern.
+Die aktuelle Liste der Befehle kann im Simulator mit dem Konsolenbefehl `help webrtc` angezeigt werden.
 
-This is a growing section and will be added to over time.
+Dieser Abschnitt wird fortlaufend erweitert.
 
-**webrtc list sessions** -- not implemented
+**webrtc list sessions** -- nicht implementiert
 
-**janus info** -- list many details of the Janus-Gateway configuration. Very ugly, non-formated JSON.
+**janus info** -- Zeigt viele Details der Janus-Gateway-Konfiguration. Sehr unübersichtliches, nicht formatiertes JSON.
 
-**janus list rooms** -- list the rooms that have been allocated in the `AudioBridge` Janus plugin
+**janus list rooms** -- Listet die vom `AudioBridge`-Janus-Plugin angelegten Räume auf
 
-[SecondLife WebRTC Voice]: https://wiki.secondlife.com/wiki/WebRTC_Voice
-[OpenSimulator]: http://opensimulator.org
-[OpenSimulator Community Conference]: https://conference.opensimulator.org
-[os-webrtc-janus]: https://github.com/Misterblue/os-webrtc-janus
-[Janus-Gateway WebRTC server]: https://janus.conf.meetecho.com/
-[os-webrtc-janus-docker]: https://github.com/Misterblue/os-webrtc-janus-docker
+[SecondLife WebRTC Voice]: https://wiki.secondlife.com/wiki/WebRTC_Voice  
+[OpenSimulator]: http://opensimulator.org  
+[OpenSimulator Community Conference]: https://conference.opensimulator.org  
+[os-webrtc-janus]: https://github.com/Misterblue/os-webrtc-janus  
+[Janus-Gateway WebRTC server]: https://janus.conf.meetecho.com/  
+[os-webrtc-janus-docker]: https://github.com/Misterblue/os-webrtc-janus-docker  
+
+---
